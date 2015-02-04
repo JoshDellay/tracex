@@ -1,0 +1,13 @@
+<head>
+  <title>TraceX Example</title>
+</head>
+<body>
+  {{> TraceX}}
+</body>
+<template name="TraceX">
+  <div id="traces">
+    {{#each traces}}
+      <div class="trace">{{msg}}</div>
+    {{/each}}
+  </div>
+</template>
