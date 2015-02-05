@@ -8,42 +8,34 @@ describe("TraceX", function() {
       this.echo(message);
     });
   });
-  it("should have a global namespace and base class", function() {
+  it("should have a namespace and base class and exception", function() {
     casper.then(function () {
       var evalResult = casper.evaluate(function() {
         return {
           "hasNamespace": ( TraceX && typeof TraceX === "object" ),
-          "hasBaseClass": ( TraceX.Class && typeof TraceX.Class === "function")
+          "hasBaseClass": ( _.has(TraceX, "Class") && typeof TraceX.Class === "function"),
+          "hasBaseException": ( _.has(TraceX, "Exception") && typeof TraceX.Exception === "function")
         }
       });
       evalResult.hasNamespace.should.equal(true);
       evalResult.hasBaseClass.should.equal(true);
+      evalResult.hasBaseException.should.equal(true);
     });
   });
-  it("should have settings initialized from Meteor settings", function() {
+  it("should have settings property", function() {
     casper.then(function () {
       var evalResult = casper.evaluate(function() {
         return {
-          "hasSettings": ( TraceX.settings && typeof TraceX.settings === "object" ),
-          "isInit": ( TraceX.settings && TraceX.settings.env === "test")
+          "hasSettings": ( _.isObject(TraceX.settings) ),
+          "hasEventSettings": ( _.has(TraceX.settings, "event") && TraceX.settings.event.id === "trace"),
+          "hasConsoleSettings": ( _.has(TraceX.settings, "console") && TraceX.settings.console.format === "meta"),
+          "hasDatabaseSettings": ( _.has(TraceX.settings, "database") && TraceX.settings.database.collection === "tracex")
         }
       });
       evalResult.hasSettings.should.equal(true);
-      evalResult.isInit.should.equal(true);
-    });
-  });
-  it("should have a singleton trace service", function() {
-    casper.then(function () {
-      var evalResult = casper.evaluate(function() {
-        if ( TraceX.service ) { TraceX.service.test = "verify"; }
-        var newService = new TraceX.TraceService();
-        return {
-          "hasSingleton": ( TraceX.service && TraceX.service instanceof TraceX.TraceService ),
-          "isSingleton": ( newService && newService instanceof TraceX.TraceService && newService.test === "verify" )
-        }
-      });
-      evalResult.hasSingleton.should.equal(true);
-      evalResult.isSingleton.should.equal(true);
+      evalResult.hasEventSettings.should.equal(true);
+      evalResult.hasConsoleSettings.should.equal(true);
+      evalResult.hasDatabaseSettings.should.equal(true);
     });
   });
   it("should allow creation of a custom TraceLogger", function() {

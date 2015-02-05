@@ -1,87 +1,119 @@
-# TraceX for Meteor
+# TraceX
 
-Simple trace logging for Meteor.
+Simple logging of debug and trace information.
+
+## About TraceX
+
+TraceX provides a simple debug and trace logging capability for the console or database. Some
+of the features supported by the package include:
+
+* Logging is supported on both the client and the server.
+* Trace activities on the client are syndicated to the server automatically.
+* Trace activites can be logged to the console and/or a database collection.
+* Logging can be filtered to specified trace levels.
+* Trace activities are logged in color on the server console for readability.
+* If used with [ClassX](https://atmospherejs.com/arsnebula/classx), it can log trace events.
 
 ## Current Version
 
-**v0.4.3**
+**v0.9.0**
 
 ## Setup and Configuration
 
-The trace logging library supports two types of logging: ``debug`` activities,
-and events including ``info``, ``warning``, ``exception`` and ``error``. Custom trace
-levels can also be used. Key features provided by the library include:
-
-* Trace logging is supported on both the client and the server.
-* Trace activities on the client are syndicated to the server.
-* Trace activities can be written to both the console, and a MongoDB collection.
-* Console logging is automatically restricted to non-production environments.
-* Trace activities are logged in color on the server console for readability.
-
-The library utilizes the following default settings:
+To begin using **TraceX**, you need to call the ``TraceX.init([options])`` method. The
+``options`` parameter (optional) allows you to override some or all of the default
+settings.
 
 ```js
-TraceX.settings = {
-  "debug": "auto",             // rule for logging debug activities
-  "events": "auto",            // rule for logging event activities
-  "console": "meta",           // format when writing to console (text, meta or json)
-  "collection": "trace",       // name of the MongoDB collection to log to
-  "eventHook": null,           // global event to handle for trace messages
-  "env": "development"         // environment to use for automatic logging rules
-}
-
-```
-
-> The settings can be updated programatically, however settings impact both the client
-and the server, and it is recommended that settings be updated in both tiers.
-
-In order to standardize logging settings on both the client and the server, the
-library will initialize settings from the ``Meteor.settings`` object. All settings must be
-placed under ``public``.
-
-```js
-{
-  "public": {
-    "env": "production",
-    "trace": {
-      "debug": "auto",
-      "events": "auto",
-      "console": "meta",
-      "collection": "trace",
-      "eventHook": "trace"
+TraceX.init({
+  "event": {
+    "id": "tracex"             // the id of the event to listen and auto-log
+  },
+  "console": {
+    "format": "meta",          // format for console logging (text, meta or json)
+    "levels": {
+      "client": null,          // array of log levels to log to the client console (or null)
+      "server": [              // array of log levels to log to the server console (or null)
+        "debug",
+        "info",
+        "warning",
+        "exception",
+        "error"
+      ]
     }
+  },
+  "database": {
+    "collection": "tracex",    // name of the database collection
+    "levels": [                // array of log levels to log to the database (or null)
+      "info",
+      "error"
+    ]
   }
-}
+});
+
 ```
 
-How debug and event activities are logged depends on the ``trace`` settings, and
-the current environment as follows:
+> Log settings are used on both the client and the server, so it is recommended that the
+library be initialized with the same settings on both tiers of your application.
 
-- **Debug**
+### Event Settings
 
-  - **db**: debug activities are logged to the database in all environments.
-  - **auto**: (default) logs to console in development, otherwise ignored.
-  - **off**: all debug entries are discarded.
+[ClassX](https://atmospherejs.com/arsnebula/classx) provides the ability to raise and listen
+for events. TraceX automatically listens for trace events raised with the event identifier specified
+in the ``event.id`` settings property.
 
-- **Events**:
+### Console Settings
 
-  - **db**: events are logged to the database in all environments.
-  - **auto**: (default) events are logged to the console in development, otherwise to the database.
-  - **off**: all events are discarded.
+Events logged on the client can be logged to both the client and server
+consoles. Events logged on the server, can be logged to the server console.
 
-In most cases, the default ``auto`` option will be the preferred choice.
+Trace events can be logged in one of three
+formats by setting the ``console.format`` setting property to one of three
+values: ``text``, ``meta`` or ``json``. The following is an example of the output
+in each of the three formats:
+
+```sh
+[DEBUG] This is a debug message in text format.
+[DEBUG] This is a debug message with additional meta. {"extra": "data"}
+{"level": "debug", "msg": "This is a message in JSON format", "meta": {"extra": "data"}}
+```
+
+Console logging can be filtered by trace level. Default trace levels are provided
+with the following intended usage:
+
+- **debug**: use for logging verbose information about execution for diagnostic purposes.
+- **info**: for information about successful events in your application.
+- **warning**: validation errors with user data, or anticipated but abnormal program conditions.
+- **exception**: anticipated errors the application can process.
+- **error**: unanticipated errors that may impact application stability.
+
+Custom trace levels can be logged by using a custom string for the ``level`` parameter when logging
+a trace message, or raising a trace event.
+
+To filter activities logged to the console, provide an array of allowed trace levels using the
+``console.levels.client`` and ``console.levels.server`` settings properties. To disable
+logging, specify either ``null`` or an empty ``[]`` array.
+
+### Database Settings
+
+Specify the name of the database collection using the ``database.collection`` setting property.
+
+Database logging can be filtered by trace level. Provide an
+array of trace levels authorized for output using the ``database.levels`` settings
+property. To disable logging, specify either ``null``
+or an empty ``[]`` array.
 
 ## Usage
 
 The library provides a number of ways to log trace events.
 
-### Default Trace Logging
+### Default Trace Object
 
-A default ``TraceX.trace`` object is available as a singleton. To log any
+A default ``TraceX.trace`` object is provided for convenience. To log any
 type of trace message, you can use the default ``log`` function which takes the
 following parameters:
 
-- **level**: One of the pre-configured values [debug, info, warning, error, fatal] or a custom level.
+- **level**: One of the pre-configured values [debug, info, warning, exception, error] or a custom level.
 - **message**: A string containing the description of the event.
 - **meta**: A serializable object.
 
@@ -89,7 +121,7 @@ following parameters:
 TraceX.trace.log(level, message, meta);
 ```
 
-For convenience, utility functions are provided for the default log levels:
+Utility functions are also provided for each of the default log levels:
 
 ```js
 TraceX.trace.debug(message, meta);
@@ -101,35 +133,45 @@ TraceX.trace.error(message, meta);
 
 #### Custom Trace Logging
 
-You can instantiate your own custom trace instances. One of the benefits
-of using custom instances, is the ability to define additional metadata to
+You can create your own custom trace loggers. One of the benefits
+of using custom instances, is the ability to specify additional metadata to
 be added to all tracing activities logged with that instance.
 
 ```js
 var myTrace = new TraceX.TraceLogger({"extra": "data"});
 myTrace.debug("This is some debug information.");
+//=> This is some debug information {"extra": "data"}
 ```
 
-> Use separate instances for each functional area of an application
+> TIP: Use separate instances for each functional area of an application
 to capture data relevant to that module.
 
-#### Event Hook
+#### Trace Events
 
-The libary supports [ClassX](https://github.com/arsnebula/classx) global events
-and provides the ability to register a global event hook to capture and log trace events. If
-the ``eventHook`` property in the settings specifies the name of a trace event to monitor,
-any properly formatted trace event will be captured and logged.
+The library supports [ClassX](https://github.com/arsnebula/classx) events, and automatically
+listens for **global** events raised that match the ``event.id`` property in
+the package settings.
 
-To log a trace message using the event hook capability, within any class instance,
-call ``raiseEvent`` specifying the correct event name, and formatting
-the data object with the ``level``, ``msg`` and ``meta`` properties.
+To log a trace message using events, call the ``raiseEvent`` method on any instance of
+a **ClassX** class. As an example, the ``TraceX`` object is itself an instance
+of a ``ClassX`` class:
 
 ```js
-this.raiseEvent("trace", {"level": level, "msg": msg, "meta": meta}, true);
+TraceX.raiseEvent("trace", {"level": level, "msg": msg, "meta": meta}, true);
 ```
 
-> To raise an event across class instances, you must
-specify ``true`` for the optional ``global`` argument.
+Within your own class, call the ``raiseEvent`` method on the internal **this** context:
+
+```js
+var MyClass = ClassX.extend(ClassX.Class, function(base) {
+  this.doSomething = function() {
+    this.raiseEvent("trace", {"level": "debug", "msg": "Some debug info.", "meta": {} }, true);
+  };
+});
+```
+
+> To raise an event across class instances, you must specify ``true`` for
+the optional ``global`` argument.
 
 ## License
 

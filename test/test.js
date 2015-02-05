@@ -1,6 +1,9 @@
 TraceX.init({
   "event": {
     "id": "trace"
+  },
+  "database": {
+    "levels": ["test"]
   }
 });
 

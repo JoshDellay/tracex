@@ -1,6 +1,6 @@
 Package.describe({
   "name": "arsnebula:tracex",
-  "summary": "Simple logging for debug and trace information.",
+  "summary": "Simple logging of debug and trace information.",
   "version": "0.9.0",
   "git": "https://github.com/arsnebula/tracex.git"
 });
